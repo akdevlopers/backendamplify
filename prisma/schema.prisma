@@ -1,0 +1,443 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model users {
+  id             Int      @id @default(autoincrement()) @map("_id")
+  uid            String   @unique @map("_uid")
+  first_name     String
+  last_name      String
+  username       String   @unique
+  email          String   @unique
+  mobile_number  String   @unique
+  password       String
+  created_at     DateTime @default(now())
+  user_roles__id Int
+  countries__id  Int?
+  vendors__id Int?     @unique
+  vendor      vendors? @relation(fields: [vendors__id], references: [id])
+  reset_token         String?  @db.VarChar(255)
+  reset_token_expires DateTime?
+}
+
+model vendors {
+  id         Int      @id @default(autoincrement()) @map("_id")
+  uid        String   @unique @map("_uid")
+  title      String
+  slug       String
+  percampaignamount  Float?
+  percampaignamountutility  Float?
+  wallet_total_amount	Float?
+	wallet_used_amount	Float?	
+	wallet_balance_amount  Float?
+  created_at DateTime @default(now())
+  users      users[]
+  botFlows                  bot_flows[] @relation
+  botReplies                BotReply[] @relation
+}
+
+model contacts {
+  id                 Int       @id @default(autoincrement()) @map("_id")
+  uid                String    @unique @map("_uid")
+  status             Int?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime?
+  first_name         String?
+  last_name          String?
+  countries__id      Int?
+  whatsapp_opt_out   Int? 
+  phone_verified_at  DateTime?
+  email              String?   @unique
+  email_verified_at  DateTime?
+  vendorId        Int?    @map("vendors__id")
+  wa_id              String?
+  language_code      String?
+  disable_ai_bot     Int?
+  data               String?   @map("__data")
+  assigned_users__id Int?
+  shopify_customer_id              String?   @unique
+  group_contacts group_contacts[]
+   country      countries? @relation(fields: [countries__id], references: [id])
+}
+
+model contact_custom_fields {
+  id          Int      @id @default(autoincrement()) @map("_id")
+  uid         String   @unique @map("_uid")
+  input_name  String
+  input_type  String
+  created_at  DateTime @default(now())
+  vendors__id Int
+}
+
+model contact_groups {
+  id          Int      @id @default(autoincrement()) @map("_id")
+  uid         String   @unique @map("_uid")
+  title       String
+  status      Int?
+  description String?
+  created_at  DateTime @default(now())
+  vendors__id Int
+  group_contacts group_contacts[]
+}
+
+model countries {
+  id               Int    @id @default(autoincrement()) @map("_id")
+  iso_code         String
+  name_capitalized String
+  name             String
+  contacts         contacts[]
+}
+
+model contact_custom_field_values {
+  id                       Int      @id @default(autoincrement()) @map("_id")
+  status                   String
+  created_at               DateTime @default(now())
+  contacts__id             Int
+  contact_custom_fields_id Int
+  field_value              String
+}
+
+model campaigns {
+  id                 Int       @id @default(autoincrement()) @map("_id")
+  uid                String     @unique @map("_uid")
+  status             Int?
+  updatedAt          DateTime? @map("updated_at")
+  createdAt          DateTime  @map("created_at")
+  title              String
+  whatsappTemplateId Int?      @map("whatsapp_templates__id")
+  scheduledAt        DateTime? @map("scheduled_at")
+  userId             Int?      @map("users__id")
+  vendorId           Int?      @map("vendors__id")
+  templateName       String?   @map("template_name")
+  data               String?   @map("__data") @db.LongText
+  templateLanguage   String?   @map("template_language")
+  timezone           String?
+  totalContacts      Int?
+  whatsappTemplate   WhatsappTemplate? @relation(fields: [whatsappTemplateId], references: [id])
+}
+
+model bot_flows {
+  id             Int       @id @default(autoincrement()) @map("_id")
+  uid            String    @map("_uid")
+  status         Int
+  updatedAt      DateTime @map("updated_at")
+  createdAt      DateTime @map("created_at")
+  title          String
+  vendorsId      Int      @map("vendors__id")
+  data           String?  @map("__data")
+  startTrigger   String?  @map("start_trigger")
+  
+  vendor         vendors  @relation(fields: [vendorsId], references: [id])
+  botReplies     BotReply[] @relation("BotFlowBotReplies")
+
+  @@map("bot_flows")
+}
+
+model BotReply {
+  id                Int       @id @default(autoincrement()) @map("_id")
+  uid               String    @unique @map("_uid")
+  status            Int?      @db.TinyInt
+  updatedAt         DateTime? @updatedAt @map("updated_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  vendorId          Int       @map("vendors__id")
+  name              String    @db.VarChar(255)
+  replyText         String    @db.Text
+  replyVariable     String?   @db.VarChar(255) @map("reply_variable")
+  triggerType       String?   @db.VarChar(45) @map("trigger_type")
+  replyTrigger      String?   @db.VarChar(5000) @map("reply_trigger")
+  priorityIndex     Int?      @db.TinyInt @map("priority_index")
+  data              String?   @db.LongText
+  botFlowId         Int?      @map("bot_flows__id")
+  botReplyId        Int?      @map("bot_replies__id")
+  botReplyQuestion  Int       @default(0) @map("bot_replies__question")
+
+  vendor            vendors   @relation(fields: [vendorId], references: [id])
+  botFlow           bot_flows?  @relation("BotFlowBotReplies", fields: [botFlowId], references: [id])
+  parentReply       BotReply? @relation("BotReplyBotReplies", fields: [botReplyId], references: [id])
+  childReplies      BotReply[] @relation("BotReplyBotReplies")
+
+  @@map("bot_replies")
+}
+
+model wallet {
+  id               Int       @id @default(autoincrement()) @map("_id")
+  uid              String?   @map("_uid")
+  vendorId         Int?      @map("vendor_id")
+  orderId          String?   @map("_orderid")
+  amount           Float?
+  taxAmount        Float?    @map("taxamount")
+  totalAmount      Float?    @map("totalamount")
+  type             String?   @map("type")
+  status           String?   @map("status")
+  purpose          String?   @map("purpose")
+  razorpayOrderId  String?   @map("razorpay_orderId")
+  razorpayAmount   String?   @map("razorpay_amount")
+  razorpayCurrency String?   @map("razorpay_currency")
+  createdAt        DateTime? @map("created_at")
+  createdBy        Int?      @map("created_by")
+  updatedAt        DateTime? @map("updated_at")
+}
+
+model WhatsappTemplate {
+  id                Int       @id @default(autoincrement()) @map("_id")
+  uid               String?   @unique @map("_uid")
+  status            String?
+  templateName      String?   @map("template_name")
+  updatedAt         DateTime? @map("updated_at")
+  createdAt         DateTime? @map("created_at")
+  templateId        String?   @map("template_id")
+  category          String?
+  language          String?
+  data              String?   @map("__data")
+  vendorId          Int?      @map("vendors__id")
+  defaultTemplateId Int?      @map("default_template_id")
+    campaigns campaigns[]
+
+  @@map("whatsapp_templates")
+}
+
+model configurations {
+  id    Int    @id @default(autoincrement()) @map("_id")
+  name  String
+  value String
+}
+
+model manual_subscriptions {
+  id                Int       @id @default(autoincrement()) @map("_id")
+  uid               String    @map("_uid")
+  status            String?
+  updated_at        DateTime?
+  created_at        DateTime? @default(now())
+  plan_id           String?
+  ends_at           DateTime?
+  remarks           String?
+  vendors__id       Int?
+  charges           Decimal?
+  data              String?   @map("__data")
+  charges_frequency String?
+}
+
+model shopify_apptokens {
+  id                Int       @id @default(autoincrement()) @map("_id")
+  uid               String?   @map("_uid")
+  shop_name         String?   @unique
+  shop_email        String?   @unique
+  access_token      String?
+  installed         Int?
+  updatedAt         DateTime? @map("updated_at")
+  createdAt         DateTime? @map("created_at")
+}
+
+model ShopifyProduct {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt @map("_id")
+  uid          String?  @db.VarChar(200) @map("_uid")
+  shopify_id   String?  @db.VarChar(1000) @unique
+  title        String   @db.VarChar(255)
+  body_html    String?  @db.Text @map("body_html")
+  vendor_id    Int?  
+  product_type String?  @db.VarChar(255) @map("product_type")
+  published_at DateTime?         @map("published_at")
+  product_link String?  @db.VarChar(2000) @map("product_link")
+  handle       String?  @db.VarChar(255)
+  variants     Json?             @map("variants")
+  images       Json?             @map("images")
+  is_shopify   Int      @default(0)         @map("is_shopify")
+  options      Json?             @map("options")
+  created_at   DateTime @default(now())     @map("created_at")
+  updated_at   DateTime @updatedAt          @map("updated_at")
+
+  @@map("shopify_products")
+}
+
+model automationFlows {
+  id           Int      @id @default(autoincrement()) @map("_id")
+  uid          String   @map("_uid")
+  status       Int
+  updatedAt    DateTime @map("updated_at")
+  createdAt    DateTime @map("created_at")
+  title        String
+  vendorsId    Int      @map("vendors__id")
+  data         String?  @map("__data")
+  startTrigger String?  @map("start_trigger")
+
+  @@unique([title, vendorsId])  
+  @@map("automation_flows")
+}
+
+model abandonedCheckouts {
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  checkout_id      String    @db.VarChar(255)
+  order_id         String?   @db.VarChar(255)
+  checkout_token   String    @unique
+  email            String?   @db.VarChar(255)
+  phone            String?   @db.VarChar(50)
+  name             String?   @db.VarChar(255)
+  shopify_customerId BigInt? @db.BigInt
+  abandoned_url    String?   @db.Text
+  total_price      Decimal?  @db.Decimal(10, 2)
+  total_tax        Decimal?  @db.Decimal(10, 2)
+  shipping_charge  Float?    @default(0.0) 
+  line_items       Json?
+  billing_address  Json?
+  shipping_lines   Json?
+  raw_data         Json?
+  created_at       DateTime? @default(now()) @db.Timestamp(0)
+  updated_at       DateTime? @updatedAt @db.Timestamp(0)
+  checkout_status  String?   @default("pending") @db.VarChar(255)
+  is_confirmed      Int?     @default(0)
+  is_message_sent  Int       @default(0) 
+  payment_method   String?   @db.VarChar(100)
+  shopify_currency String?   @db.VarChar(255)
+  shopify_address  String?   @db.VarChar(300)
+  shopify_street   String?   @db.VarChar(255)
+  shopify_city     String?   @db.VarChar(255)
+  shopify_state    String?   @db.VarChar(255)
+  shopify_zip      Int?
+  shopify_vendor   Int?
+
+  @@map("abandoned_checkouts")
+}
+
+model flow_select {
+  id      Int    @id @default(autoincrement()) @map("_id")
+  data    String
+  flow_id String @unique
+}
+
+model AbandonedCheckoutLogs {
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
+  abandonedId   Int      @db.UnsignedInt
+  email         String?  @db.VarChar(255)
+  name          String?  @db.VarChar(255)
+  abandoned_url String?  @db.Text
+  status        String   @db.VarChar(50)  // e.g. "queued", "failed", etc.
+  created_at    DateTime @default(now())  @db.Timestamp(0)
+  step          Int?
+
+  @@map("abandoned_checkout_logs")
+}
+
+
+model automation_flow_steps {
+   id   Int    @id @default(autoincrement()) @map("_id")
+  uid          String   @map("_uid")
+  automation_flow_id Int
+  flow_step_order   Int
+  delay_minutes     Int
+  template_id       Int
+  type              Int       /// 1 = wait, 2 = message
+  created_at        DateTime? @db.DateTime
+  updated_at        DateTime  @default(now()) @db.DateTime
+  variable_data     Json?  
+}
+
+model razorpayresponse {
+  razorpayresponse_id   Int    @id @default(autoincrement()) 
+  razorpayresponse_value  String? 
+}
+
+model group_contacts {
+  id                Int            @id @default(autoincrement()) @map("_id")
+  uid               String         @unique @map("_uid") 
+  status            Int?
+  updated_at        DateTime?
+  created_at        DateTime?       @default(now())
+  contactGroupsId   Int            @map("contact_groups__id")
+  contactsId        Int            @map("contacts__id")
+
+  contact_group     contact_groups @relation(fields: [contactGroupsId], references: [id], onDelete: Cascade)
+  contact           contacts       @relation(fields: [contactsId], references: [id], onDelete: Cascade)
+
+  @@map("group_contacts")
+}
+
+
+model vendorSettings {
+  id                 Int       @id @default(autoincrement()) @map("_id")
+  uid                String?   @unique @map("_uid")
+  status             String?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime?
+  vendors__id        Int?
+  name               String?
+  value              String?
+  data_type          Int?
+
+  @@map("vendor_settings")
+  @@unique([vendors__id, name])
+}
+
+model settings{
+  id                 Int       @id @default(autoincrement()) @map("_id")
+  uid                String?   @map("_uid")
+  type               String?
+  value               Float
+}
+
+
+
+
+model whatsAppMessageLog {
+  id                          Int      @id @default(autoincrement()) @map("_id")
+  uid                         String   @unique                      @map("_uid")
+  status                      String? 
+  updatedAt                DateTime? @updatedAt                 @map("updated_at")
+  createdAt                   DateTime  @default(now())            @map("created_at")
+  message                     String?                              @db.Text
+  contactId                   Int?                                  @map("contacts__id")
+  campaignId                  Int?                                  @map("campaigns__id")
+  vendorId                    Int?                                  @map("vendors__id")
+  contactWaId                 String?                               @map("contact_wa_id")
+  wamid                       String?                               @map("wamid")
+  wabPhoneNumberId            Int?                               @map("wab_phone_number_id")
+  isIncomingMessage           Int?                                  @map("is_incoming_message")
+  data                        String?                                 @map("__data") @db.LongText
+  messagedAt                  DateTime?                             @map("messaged_at")
+  isForwarded                 Int?                              @map("is_forwarded")
+  repliedToMessageLogUid      String?                               @map("replied_to_whatsapp_message_logs__uid")
+  messagedByUserId            Int?                                  @map("messaged_by_users__id")
+  botReplyId                  Int      @default(0)                  @map("bot_reply_id")
+  abandoned_checkout_id       Int? 
+  cod_id                      Int? 
+
+  @@map("whatsapp_message_logs")
+}
+
+
+model WhatsAppMessageQueue {
+  id                      Int      @id @default(autoincrement()) @map("_id")
+  uid                     String   @map("_uid") @db.Char(36)
+  status                  Int?
+  updatedAt               DateTime? @map("updated_at")
+  createdAt               DateTime  @default(now())  @map("created_at")
+  vendorId                Int       @map("vendors__id")
+  scheduledAt             DateTime? @map("scheduled_at")
+  data                    Json?     @map("__data")
+  phoneWithCountryCode    String    @map("phone_with_country_code") 
+  campaignId              Int       @map("campaigns__id")
+  contactId               Int?      @map("contacts__id")
+  retries                 Int?
+
+  @@map("whatsapp_message_queue")
+}
+
+
+
+
+
+
+
+
+
+

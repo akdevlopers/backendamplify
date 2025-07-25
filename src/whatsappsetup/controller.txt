@@ -1,0 +1,78 @@
+import {
+  Controller,
+  Post,
+  Patch,
+  Delete,
+  ParseIntPipe,
+  Get,
+  Body,
+  Param,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
+import { WhatsappSetupService } from './whatsappsetup.service';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiProperty,
+  ApiResponse,
+} from '@nestjs/swagger';
+
+@ApiTags('Whatsappsetup')
+@Controller('whatsappsetup')
+export class WhatsappsetupController {
+    constructor(private WhatsappSetupService: WhatsappSetupService) {}
+
+  @Post('/processEmbeddedSignUp')
+  @ApiOperation({ summary: 'Facebook Setup' })
+
+
+  processEmbeddedSignUp(
+      @Body('request_code') request_code: string, @Body('waba_id') waba_id: string,@Body('phone_number_id') phone_number_id: string,@Body('vendorUid') vendorUid: string
+    ) {
+      return this.WhatsappSetupService.processEmbeddedSignUp(request_code,waba_id,phone_number_id,vendorUid);
+    }
+
+
+
+  @Post('/refreshHealthStatus')
+  @ApiOperation({ summary: 'Refresh Health Status' })
+
+  refreshHealthStatus(
+     @Body('vendorUid') vendorUid: string
+    ) {
+      return this.WhatsappSetupService.refreshHealthStatus(vendorUid);
+    }
+
+  @Post('/syncPhoneNumbers')
+  @ApiOperation({ summary: 'Sync PhoneNumbers' })
+
+  syncPhoneNumbers(
+     @Body('vendorUid') vendorUid: string
+    ) {
+      return this.WhatsappSetupService.syncPhoneNumbers(vendorUid);
+    }
+
+
+    @Post('/createTemplate')
+  @ApiOperation({ summary: 'createTemplate' })
+
+  createTemplate(
+     @Body('templateName') name: string, @Body('templateLanguage') language: string,@Body('components') components: string,@Body('vendorUid') vendorUid: string
+    ) {
+      return this.WhatsappSetupService.createTemplate(name,language,components,vendorUid);
+    }
+
+
+     @Post('/whatsappCloudApiSetup')
+    @ApiOperation({ summary: 'whatsappCloudApiSetup' })
+
+    whatsappCloudApiSetup(
+      @Body('vendorUid') vendorUid: string
+      ) {
+        return this.WhatsappSetupService.whatsappCloudApiSetup(vendorUid);
+      }
+
+
+}
+
